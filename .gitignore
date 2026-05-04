@@ -1,8 +1,8 @@
 # Build artifacts
-square
-square.exe
+bin/
 *.o
 *.obj
+*.exe
 
 # macOS
 .DS_Store
