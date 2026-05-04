@@ -3,6 +3,9 @@
 Any planning documents, scratch notes, or temporary files should go into
 `.temp/` at the root of this project.
 
+This project does **not** use Linear. Do not create, update, or manage Linear
+tickets for work in this repository.
+
 ## ⚠️ DO NOT COMMIT OR PUSH UNLESS EXPLICITLY ASKED
 
 **NEVER** commit and push code to the repository unless the user **explicitly**
