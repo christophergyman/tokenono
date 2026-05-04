@@ -1,1 +1,15 @@
+# Build artifacts
 square
+square.exe
+*.o
+*.obj
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Scratch / planning area
+/temp/
