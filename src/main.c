@@ -1,8 +1,36 @@
 #include <raylib.h>
 
+#include <stdbool.h>
+
 #include "app_config.h"
 #include "arena.h"
 #include "arena_tests.h"
+
+static float clamp_float(float value, float min, float max)
+{
+    if (value < min) {
+        return min;
+    }
+    if (value > max) {
+        return max;
+    }
+    return value;
+}
+
+static float move_toward_zero(float value, float amount)
+{
+    if (value > 0.0f) {
+        value -= amount;
+        return value < 0.0f ? 0.0f : value;
+    }
+
+    if (value < 0.0f) {
+        value += amount;
+        return value > 0.0f ? 0.0f : value;
+    }
+
+    return 0.0f;
+}
 
 int main(int argc, char **argv)
 {
@@ -30,11 +58,22 @@ int main(int argc, char **argv)
     SetTargetFPS(60);
 
     const float SQUARE_SIZE = 100.0f;
-    const float PLAYER_SPEED = 240.0f;
+    const float FLOOR_Y = SCREEN_HEIGHT - SQUARE_SIZE;
+    const float MOVE_ACCELERATION = 2200.0f;
+    const float MAX_RUN_SPEED = 360.0f;
+    const float GROUND_FRICTION = 5200.0f;
+    const float AIR_FRICTION = 1200.0f;
+    const float GRAVITY = 1800.0f;
+    const float JUMP_VELOCITY = -650.0f;
+    const float FAST_FALL_ACCELERATION = 1200.0f;
+
     Vector2 square_position = {
         .x = SCREEN_WIDTH / 2.0f - SQUARE_SIZE / 2.0f,
-        .y = SCREEN_HEIGHT / 2.0f - SQUARE_SIZE / 2.0f,
+        .y = FLOOR_Y,
     };
+    Vector2 player_velocity = {0};
+    bool is_grounded = true;
+
     const Vector2 square_size = {
         .x = SQUARE_SIZE,
         .y = SQUARE_SIZE,
@@ -44,29 +83,45 @@ int main(int argc, char **argv)
         // Anything allocated from frame_arena must not survive past this frame.
         arena_reset(&frame_arena);
 
-        Vector2 move_direction = {0};
-        if (IsKeyDown(KEY_W)) {
-            move_direction.y -= 1.0f;
-        }
-        if (IsKeyDown(KEY_S)) {
-            move_direction.y += 1.0f;
-        }
+        const float delta_time = GetFrameTime();
+
+        float input_x = 0.0f;
         if (IsKeyDown(KEY_A)) {
-            move_direction.x -= 1.0f;
+            input_x -= 1.0f;
         }
         if (IsKeyDown(KEY_D)) {
-            move_direction.x += 1.0f;
+            input_x += 1.0f;
         }
 
-        if (move_direction.x != 0.0f && move_direction.y != 0.0f) {
-            const float DIAGONAL_NORMALIZER = 0.70710678118f;
-            move_direction.x *= DIAGONAL_NORMALIZER;
-            move_direction.y *= DIAGONAL_NORMALIZER;
+        if (input_x != 0.0f) {
+            player_velocity.x += input_x * MOVE_ACCELERATION * delta_time;
+            player_velocity.x = clamp_float(player_velocity.x, -MAX_RUN_SPEED, MAX_RUN_SPEED);
+        } else {
+            const float friction = is_grounded ? GROUND_FRICTION : AIR_FRICTION;
+            player_velocity.x = move_toward_zero(player_velocity.x, friction * delta_time);
         }
 
-        const float delta_time = GetFrameTime();
-        square_position.x += move_direction.x * PLAYER_SPEED * delta_time;
-        square_position.y += move_direction.y * PLAYER_SPEED * delta_time;
+        if (IsKeyPressed(KEY_W) && is_grounded) {
+            player_velocity.y = JUMP_VELOCITY;
+            is_grounded = false;
+        }
+
+        player_velocity.y += GRAVITY * delta_time;
+
+        if (IsKeyDown(KEY_S) && !is_grounded) {
+            player_velocity.y += FAST_FALL_ACCELERATION * delta_time;
+        }
+
+        square_position.x += player_velocity.x * delta_time;
+        square_position.y += player_velocity.y * delta_time;
+
+        if (square_position.y >= FLOOR_Y) {
+            square_position.y = FLOOR_Y;
+            player_velocity.y = 0.0f;
+            is_grounded = true;
+        } else {
+            is_grounded = false;
+        }
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
