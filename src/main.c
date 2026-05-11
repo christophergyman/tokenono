@@ -29,17 +29,48 @@ int main(int argc, char **argv)
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "square game");
     SetTargetFPS(60);
 
-    const int SQUARE_SIZE = 100;
-    const int SQUARE_X = SCREEN_WIDTH / 2 - SQUARE_SIZE / 2;
-    const int SQUARE_Y = SCREEN_HEIGHT / 2 - SQUARE_SIZE / 2;
+    const float SQUARE_SIZE = 100.0f;
+    const float PLAYER_SPEED = 240.0f;
+    Vector2 square_position = {
+        .x = SCREEN_WIDTH / 2.0f - SQUARE_SIZE / 2.0f,
+        .y = SCREEN_HEIGHT / 2.0f - SQUARE_SIZE / 2.0f,
+    };
+    const Vector2 square_size = {
+        .x = SQUARE_SIZE,
+        .y = SQUARE_SIZE,
+    };
 
     while (!WindowShouldClose()) {
         // Anything allocated from frame_arena must not survive past this frame.
         arena_reset(&frame_arena);
 
+        Vector2 move_direction = {0};
+        if (IsKeyDown(KEY_W)) {
+            move_direction.y -= 1.0f;
+        }
+        if (IsKeyDown(KEY_S)) {
+            move_direction.y += 1.0f;
+        }
+        if (IsKeyDown(KEY_A)) {
+            move_direction.x -= 1.0f;
+        }
+        if (IsKeyDown(KEY_D)) {
+            move_direction.x += 1.0f;
+        }
+
+        if (move_direction.x != 0.0f && move_direction.y != 0.0f) {
+            const float DIAGONAL_NORMALIZER = 0.70710678118f;
+            move_direction.x *= DIAGONAL_NORMALIZER;
+            move_direction.y *= DIAGONAL_NORMALIZER;
+        }
+
+        const float delta_time = GetFrameTime();
+        square_position.x += move_direction.x * PLAYER_SPEED * delta_time;
+        square_position.y += move_direction.y * PLAYER_SPEED * delta_time;
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
-        DrawRectangle(SQUARE_X, SQUARE_Y, SQUARE_SIZE, SQUARE_SIZE, DARKBLUE);
+        DrawRectangleV(square_position, square_size, DARKBLUE);
         EndDrawing();
     }
 
