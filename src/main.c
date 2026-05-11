@@ -127,13 +127,13 @@ int main(int argc, char **argv)
     SetTargetFPS(60);
 
     const float PLAYER_SIZE = 28.0f;
-    const float MOVE_ACCELERATION = 2200.0f;
-    const float MAX_RUN_SPEED = 360.0f;
-    const float GROUND_FRICTION = 5200.0f;
-    const float AIR_FRICTION = 1200.0f;
-    const float GRAVITY = 1800.0f;
-    const float JUMP_VELOCITY = -650.0f;
-    const float FAST_FALL_ACCELERATION = 1200.0f;
+    const float MOVE_ACCELERATION = 1500.0f;
+    const float MAX_RUN_SPEED = 240.0f;
+    const float GROUND_FRICTION = 3600.0f;
+    const float AIR_FRICTION = 800.0f;
+    const float GRAVITY = 1200.0f;
+    const float JUMP_VELOCITY = -430.0f;
+    const float FAST_FALL_ACCELERATION = 800.0f;
 
     Vector2 square_position = {
         .x = 64.0f,
