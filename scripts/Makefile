@@ -11,10 +11,12 @@ TARGET = bin/square
 SRC = src/main.c \
       src/core/arena.c \
       src/core/arena_tests.c \
-      src/core/app_config.c
+      src/core/app_config.c \
+      src/core/ecs.c
 HDR = src/include/app_config.h \
       src/include/arena.h \
-      src/include/arena_tests.h
+      src/include/arena_tests.h \
+      src/include/ecs.h
 ARGS ?=
 
 $(TARGET): $(SRC) $(HDR)
