@@ -32,4 +32,23 @@ make -f scripts/Makefile run
 make -f scripts/Makefile run ARGS="--no-debug"
 ```
 
-Hit `ESC` or close the window to quit.
+## Development Auto-Restart
+
+Run the dev loop:
+
+```bash
+./dev
+```
+
+Or through Make:
+
+```bash
+make -f scripts/Makefile dev
+```
+
+The dev loop watches C sources, headers, `scripts/Makefile`, and `build`. When
+one changes, it rebuilds and restarts the game. If a rebuild fails, the current
+running game stays open.
+
+Hit `ESC` or close the window to quit the game. Press `Ctrl-C` in the terminal
+to stop the dev loop.

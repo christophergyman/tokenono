@@ -12,15 +12,21 @@ SRC = src/main.c \
       src/core/arena.c \
       src/core/arena_tests.c \
       src/core/app_config.c
+HDR = src/include/app_config.h \
+      src/include/arena.h \
+      src/include/arena_tests.h
 ARGS ?=
 
-$(TARGET): $(SRC)
+$(TARGET): $(SRC) $(HDR)
 	$(CC) $(CFLAGS) -I$(PROJECT_INCLUDE) -I$(RAYLIB_INCLUDE) -o $(TARGET) $(SRC) $(LDFLAGS)
 
 run: $(TARGET)
 	./$(TARGET) $(ARGS)
 
+dev:
+	./scripts/dev $(ARGS)
+
 clean:
 	rm -f $(TARGET)
 
-.PHONY: run clean
+.PHONY: run dev clean

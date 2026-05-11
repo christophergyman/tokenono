@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+cd "$(dirname "$0")/.."
+
+TARGET="bin/square"
+GAME_PID=""
+
+source_stamp() {
+    {
+        find src -type f \( -name '*.c' -o -name '*.h' \) -print
+        printf '%s\n' scripts/Makefile build
+    } | sort | while IFS= read -r file; do
+        if [[ -e "$file" ]]; then
+            stat -f "%m %z %N" "$file" 2>/dev/null || stat -c "%Y %s %n" "$file"
+        fi
+    done | shasum | awk '{print $1}'
+}
+
+build_game() {
+    echo
+    echo "=== Building ==="
+    make -f scripts/Makefile
+}
+
+stop_game() {
+    if [[ -n "$GAME_PID" ]] && kill -0 "$GAME_PID" 2>/dev/null; then
+        echo "=== Stopping game pid $GAME_PID ==="
+        kill "$GAME_PID" 2>/dev/null || true
+        wait "$GAME_PID" 2>/dev/null || true
+    fi
+    GAME_PID=""
+}
+
+start_game() {
+    echo "=== Starting $TARGET $* ==="
+    "./$TARGET" "$@" &
+    GAME_PID=$!
+}
+
+cleanup() {
+    stop_game
+}
+trap cleanup EXIT INT TERM
+
+if ! build_game; then
+    echo "Initial build failed; fix the errors and rerun scripts/dev."
+    exit 1
+fi
+
+last_stamp="$(source_stamp)"
+start_game "$@"
+
+echo
+printf 'Watching src/**/*.c, src/**/*.h, scripts/Makefile, and build. Press Ctrl-C to stop.\n'
+
+while true; do
+    sleep 1
+
+    if [[ -n "$GAME_PID" ]] && ! kill -0 "$GAME_PID" 2>/dev/null; then
+        wait "$GAME_PID" 2>/dev/null || true
+        echo "=== Game exited; waiting for the next source change ==="
+        GAME_PID=""
+    fi
+
+    current_stamp="$(source_stamp)"
+    if [[ "$current_stamp" != "$last_stamp" ]]; then
+        last_stamp="$current_stamp"
+        echo
+        echo "=== Change detected ==="
+
+        if build_game; then
+            stop_game
+            start_game "$@"
+            echo "=== Reloaded ==="
+        else
+            echo "=== Build failed; keeping the current game process running ==="
+        fi
+    fi
+done
