@@ -1,10 +1,37 @@
 #include <raylib.h>
 
+#include <math.h>
 #include <stdbool.h>
 
 #include "app_config.h"
 #include "arena.h"
 #include "arena_tests.h"
+
+#define TILE_SIZE 32
+#define MAP_WIDTH 25
+#define MAP_HEIGHT 19
+
+static const char *LEVEL_MAP[MAP_HEIGHT] = {
+    ".........................",
+    ".........................",
+    ".........................",
+    ".........................",
+    "..................###....",
+    ".........................",
+    "............###..........",
+    ".........................",
+    "......###................",
+    ".........................",
+    ".........................",
+    ".....................####",
+    ".........................",
+    ".........................",
+    "###......................",
+    ".........................",
+    ".........................",
+    ".........................",
+    "#########################",
+};
 
 static float clamp_float(float value, float min, float max)
 {
@@ -32,6 +59,48 @@ static float move_toward_zero(float value, float amount)
     return 0.0f;
 }
 
+static bool is_solid_tile(int tile_x, int tile_y)
+{
+    if (tile_x < 0 || tile_x >= MAP_WIDTH || tile_y < 0 || tile_y >= MAP_HEIGHT) {
+        return false;
+    }
+
+    return LEVEL_MAP[tile_y][tile_x] == '#';
+}
+
+static int world_to_tile(float world_position)
+{
+    return (int)floorf(world_position / TILE_SIZE);
+}
+
+static bool player_hits_horizontal_tile(Vector2 position, Vector2 size, int tile_x)
+{
+    const int top_tile = world_to_tile(position.y);
+    const int bottom_tile = world_to_tile(position.y + size.y - 0.001f);
+
+    for (int tile_y = top_tile; tile_y <= bottom_tile; tile_y++) {
+        if (is_solid_tile(tile_x, tile_y)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool player_hits_vertical_tile(Vector2 position, Vector2 size, int tile_y)
+{
+    const int left_tile = world_to_tile(position.x);
+    const int right_tile = world_to_tile(position.x + size.x - 0.001f);
+
+    for (int tile_x = left_tile; tile_x <= right_tile; tile_x++) {
+        if (is_solid_tile(tile_x, tile_y)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 int main(int argc, char **argv)
 {
     const AppConfig config = app_config_parse(argc, argv);
@@ -57,8 +126,7 @@ int main(int argc, char **argv)
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "square game");
     SetTargetFPS(60);
 
-    const float SQUARE_SIZE = 100.0f;
-    const float FLOOR_Y = SCREEN_HEIGHT - SQUARE_SIZE;
+    const float PLAYER_SIZE = 28.0f;
     const float MOVE_ACCELERATION = 2200.0f;
     const float MAX_RUN_SPEED = 360.0f;
     const float GROUND_FRICTION = 5200.0f;
@@ -68,15 +136,15 @@ int main(int argc, char **argv)
     const float FAST_FALL_ACCELERATION = 1200.0f;
 
     Vector2 square_position = {
-        .x = SCREEN_WIDTH / 2.0f - SQUARE_SIZE / 2.0f,
-        .y = FLOOR_Y,
+        .x = 64.0f,
+        .y = 18.0f * TILE_SIZE - PLAYER_SIZE,
     };
     Vector2 player_velocity = {0};
     bool is_grounded = true;
 
-    const Vector2 square_size = {
-        .x = SQUARE_SIZE,
-        .y = SQUARE_SIZE,
+    const Vector2 player_size = {
+        .x = PLAYER_SIZE,
+        .y = PLAYER_SIZE,
     };
 
     while (!WindowShouldClose()) {
@@ -113,19 +181,56 @@ int main(int argc, char **argv)
         }
 
         square_position.x += player_velocity.x * delta_time;
-        square_position.y += player_velocity.y * delta_time;
+        if (player_velocity.x > 0.0f) {
+            const int right_tile = world_to_tile(square_position.x + player_size.x - 0.001f);
+            if (player_hits_horizontal_tile(square_position, player_size, right_tile)) {
+                square_position.x = right_tile * TILE_SIZE - player_size.x;
+                player_velocity.x = 0.0f;
+            }
+        } else if (player_velocity.x < 0.0f) {
+            const int left_tile = world_to_tile(square_position.x);
+            if (player_hits_horizontal_tile(square_position, player_size, left_tile)) {
+                square_position.x = (left_tile + 1) * TILE_SIZE;
+                player_velocity.x = 0.0f;
+            }
+        }
 
-        if (square_position.y >= FLOOR_Y) {
-            square_position.y = FLOOR_Y;
-            player_velocity.y = 0.0f;
-            is_grounded = true;
-        } else {
-            is_grounded = false;
+        square_position.y += player_velocity.y * delta_time;
+        is_grounded = false;
+        if (player_velocity.y > 0.0f) {
+            const int bottom_tile = world_to_tile(square_position.y + player_size.y - 0.001f);
+            if (player_hits_vertical_tile(square_position, player_size, bottom_tile)) {
+                square_position.y = bottom_tile * TILE_SIZE - player_size.y;
+                player_velocity.y = 0.0f;
+                is_grounded = true;
+            }
+        } else if (player_velocity.y < 0.0f) {
+            const int top_tile = world_to_tile(square_position.y);
+            if (player_hits_vertical_tile(square_position, player_size, top_tile)) {
+                square_position.y = (top_tile + 1) * TILE_SIZE;
+                player_velocity.y = 0.0f;
+            }
         }
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
-        DrawRectangleV(square_position, square_size, DARKBLUE);
+        for (int tile_y = 0; tile_y < MAP_HEIGHT; tile_y++) {
+            for (int tile_x = 0; tile_x < MAP_WIDTH; tile_x++) {
+                if (is_solid_tile(tile_x, tile_y)) {
+                    DrawRectangle(tile_x * TILE_SIZE,
+                                  tile_y * TILE_SIZE,
+                                  TILE_SIZE,
+                                  TILE_SIZE,
+                                  GRAY);
+                    DrawRectangleLines(tile_x * TILE_SIZE,
+                                       tile_y * TILE_SIZE,
+                                       TILE_SIZE,
+                                       TILE_SIZE,
+                                       DARKGRAY);
+                }
+            }
+        }
+        DrawRectangleV(square_position, player_size, DARKBLUE);
         EndDrawing();
     }
 
