@@ -1,2 +1,4 @@
 #!/usr/bin/env bash
-exec scripts/build "$@"
+set -euo pipefail
+
+make -f scripts/Makefile run ARGS="$*"
